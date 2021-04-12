@@ -167,6 +167,6 @@ close(v);
 
 The following videos are result of magnifying `face.mp4` and `baby2.mp4`
 
-![Alt text](https://youtu.be/_dFyt0PCUrg)
-![Alt text](https://youtu.be/wjo-sh04AtM)
+[link text](https://youtu.be/_dFyt0PCUrg)
+[link text](https://youtu.be/wjo-sh04AtM)
 
