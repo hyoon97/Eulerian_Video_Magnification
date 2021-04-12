@@ -5,65 +5,53 @@
 At this stage, the videos are imported, and each frame are converted from RGB format to YIQ format using the following code
    
 ```matlab
-face_video = VideoReader('data/face.mp4');
-baby_video = VideoReader('data/baby2.mp4');
+% video = VideoReader('data/face.mp4');
+video = VideoReader('data/baby2.mp4');
 
-original_video = zeros(face_video.NumFrames, face_video.Height, face_video.Width, 3);
+original_video = zeros(video.Height,video.Width, 3, video.NumFrames);
 idx = 1;
-while hasFrame(face_video)
-    frame = readFrame(face_video);
-    original_video(idx, :, :, :) = rgb2ntsc(frame);
+while hasFrame(video)
+    frame = readFrame(video);
+    original_video(:, :, :, idx) = rgb2ntsc(im2double(frame)/255);
     idx = idx + 1;
 end
 ```
 
 ## Laplacian Pyramid
 
-After converting the video format from RGB to YIQ, gaussian pyramid is constructed via calling the function `create_gaussian_pyramid`.
+After converting the video format from RGB to YIQ, gaussian pyramid is constructed via calling the function `create_laplacian_pyramid`.
 The gaussian pyramid is constructed via using `impyramid(image, 'direction')` to compute gaussian pyramid in the direction of #reduce# or #expand#. 
 Gaussian pyramid is stored in the shape of `[frame, height, width, channel]` to ease the conversion from time domain to frequency for temporal filtering at the next stage.
 ```matlab
-gaussian_video_pyramid = create_gaussian_pyramid(original_video, pyramid_levels);
+pyramid_levels = 4;
+
+[gaussian_pyramid, laplacian_pyramid] = create_laplacian_pyramid(original_video,pyramid_levels);
 ```
 ```matlab
-function gaussian_video_pyramid = create_gaussian_pyramid(original_video, pyramid_levels)
+function [gaussian_pyramid, laplacian_pyramid] = create_laplacian_pyramid(original_video,pyramid_levels)
 
-gaussian_video_pyramid = {};
-
-gaussian_video_pyramid{1} = original_video;
-
-for level=1:pyramid_levels
-    gaussian_video_pyramid{level+1} = impyramid(gaussian_video_pyramid{level}, 'reduce');
-end
-
-end
-```
-
-With the gaussian pyramid, laplacian pyramid is constructed via subtracting each layer of gaussian pyramid by its next layer. 
-
-```matlab
-laplacian_video_pyramid = create_laplacian_pyramid(gaussian_video_pyramid,pyramid_levels);
-```
-```
-function laplacian_video_pyramid = create_laplacian_pyramid(gaussian_video_pyramid,pyramid_levels)
+gaussian_pyramid = {};
+gaussian_pyramid{1} = original_video;
 
 laplacian_video_pyramid = {};
 
-for level=1:pyramid_levels
-    [H, W, ~, numFrames] = size(gaussian_video_pyramid{level});
-    for frame=1:numFrames
-        laplacian_video_pyramid{level}(:, :, :, frame) = gaussian_video_pyramid{level}(:, :, :, frame) - imresize(impyramid(gaussian_video_pyramid{level+1}(:,:,:, frame),'expand'), [H, W]);
-    end
+for level=1:pyramid_levels-1
+    [H, W, ~, ~] = size(gaussian_pyramid{level});
+    gaussian_pyramid{level+1} = impyramid(gaussian_pyramid{level}, 'reduce');
+    resized = imresize(gaussian_pyramid{level+1}, [H, W]);
+    laplacian_pyramid{level} = gaussian_pyramid{level} - resized;
 end
 
-laplacian_video_pyramid{end+1} = gaussian_video_pyramid{end};
+laplacian_pyramid{end+1} = gaussian_pyramid{end};
 end
 ```
 
 ## Temporal Filtering
-
 ```matlab
-function filtered_video_pyramid = apply_temporal_filtering(laplacian_video_pyramid, numFrames, pyramid_levels)
+filtered_pyramid = apply_temporal_filtering(laplacian_pyramid, video.NumFrames, pyramid_levels);
+```
+```matlab
+function filtered_pyramid = apply_temporal_filtering(laplacian_pyramid, numFrames, pyramid_levels)
 
 Fs = 30;  % Sampling Frequency
 
@@ -73,82 +61,66 @@ Fc2 = 1;     % Second Cutoff Frequency
 
 fftHd = freqz(butterworthBandpassFilter(Fs, N, Fc1, Fc2), numFrames);
 
-result_pyramid = {};
+filtered_pyramid = {};
 
 for level=1:pyramid_levels
-    [row, col, channel, frame] = size(laplacian_video_pyramid{level});
+    [H, W, c, frame] = size(laplacian_pyramid{level});
     
-    filtered_pixel = zeros(row, col, channel, frame);
+    filtered_pixel = zeros(H, W, c, frame);
     
-    for r = 1:row
-        for c = 1:col
-            pixel = laplacian_video_pyramid{level}(r, c, 1, :);
+    for h = 1:H
+        for w = 1:W
+            pixel = laplacian_pyramid{level}(h, w, 1, :);
             fft_pixel = fft(pixel);
-            filtered_pixel(r, c, 1, :) = abs(ifft(fft_pixel .* reshape(fftHd, [1,1,1,numFrames])));
+            filtered_pixel(h, w, 1, :) = real(ifft(fft_pixel .* reshape(fftHd, [1,1,1,numFrames])));
             
-            pixel = laplacian_video_pyramid{level}(r, c, 2, :);
+            pixel = laplacian_pyramid{level}(h, w, 2, :);
             fft_pixel = fft(pixel);
-            filtered_pixel(r, c, 2, :) = abs(ifft(fft_pixel .* reshape(fftHd, [1,1,1,numFrames])));
+            filtered_pixel(h, w, 2, :) = real(ifft(fft_pixel .* reshape(fftHd, [1,1,1,numFrames])));
             
-            pixel = laplacian_video_pyramid{level}(r, c, 3, :);
+            pixel = laplacian_pyramid{level}(h, w, 3, :);
             fft_pixel = fft(pixel);
-            filtered_pixel(r, c, 3, :) = abs(ifft(fft_pixel .* reshape(fftHd, [1,1,1,numFrames])));
+            filtered_pixel(h, w, 3, :) = real(ifft(fft_pixel .* reshape(fftHd, [1,1,1,numFrames])));
         end
     end
     
-    result_pyramid{level} = filtered_pixel;
+    filtered_pyramid{level} = filtered_pixel;
     
 end
-
-filtered_video_pyramid = result_pyramid;
-
 ```
 
 ## Image Reconstruction
 Each frame from video are reconstructed by adding amplifying factors to the orginial frame.
 ```matlab 
-amplified_video = collapse_laplacian_pyramid(filtered_video_pyramid, pyramid_levels, face_video.NumFrames);
-
-result = original_video(:, :, :, :) + amplified_video(:, :, :, :);
+reconstructed_video = reconstruct_video(laplacian_pyramid,filtered_pyramid, pyramid_levels);
 ```
 
 The amplifying factor is obtained expanding filtered laplacian pyramid to the original size. After expanding all layers from filtered laplacian pyramid, the sum of expanded laplacian layers become the amplifying factor used to magnify the motion inside the video.
 
 ```matlab
-amplified_filter = filtered_video_pyramid{1};
+function reconstructed_video = reconstruct_video(laplacian_pyramid,filtered_pyramid, pyramid_levels)
 
-for frame=1:numFrames
+original = laplacian_pyramid{end} + filtered_pyramid{end} * 120;
+
+for level=1:pyramid_levels-1
+    [H, W, c, frame] = size(laplacian_pyramid{pyramid_levels - level});
+    resized = imresize(original, [H, W]);
     
-    for level=2:pyramid_levels
-        [H, W, channel, ~] = size(filtered_video_pyramid{1});
-        tmp_frame = filtered_video_pyramid{level}(:, :, :, frame);
-        
-        for i=2:level
-            tmp_frame = impyramid(tmp_frame,'expand');
-        end
-        tmp_frame = imresize(tmp_frame, [H, W]);
-        
-%         if level == 4 || level == 5
-%             amplified_filter = amplified_filter + tmp_frame;
-%         else
-%             amplified_filter = amplified_filter + tmp_frame;
-%         end
-        amplified_filter = amplified_filter + tmp_frame;
-    end
-    
+    original = laplacian_pyramid{pyramid_levels - level} + resized;
 end
 
-result_pyramid = amplified_filter;
-
+reconstructed_video = original;
+end
 ```
 
 Finally, the magnified video is saved as `.mp4` file using the following code
 ```matlab
-v = VideoWriter('test.mp4','MPEG-4');
+v = VideoWriter('test.mp4', 'MPEG-4');
 open(v);
-for i=1:face_video.NumFrames
-    frame(:, :, :) = result(:,:,:, i);
+for i=1:video.NumFrames
+    frame(:,:,:) = reconstructed_video(:,:,:,i)*255;
     frame = ntsc2rgb(frame);
-    writeVideo(v,frame);
+    writeVideo(v, frame);
 end
+close(v);
 ```
