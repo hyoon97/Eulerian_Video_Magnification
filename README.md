@@ -51,13 +51,15 @@ end
 
 The following images shows the result of gaussian and laplacian pyramid.   
 
-###Guassian Pyramid 
+### Guassian Pyramid 
+
 ![Alt text](/images/gaussian_1.png)
 ![Alt text](/images/gaussian_2.png)
 ![Alt text](/images/gaussian_3.png)
 ![Alt text](/images/gaussian_4.png)
 
-###Laplacian Pyramid
+### Laplacian Pyramid
+
 ![Alt text](/images/laplacian_1.png)
 ![Alt text](/images/laplacian_2.png)
 ![Alt text](/images/laplacian_3.png)
@@ -165,6 +167,6 @@ close(v);
 
 The following videos are result of magnifying `face.mp4` and `baby2.mp4`
 
-![Alt text](face.mp4)
-![Alt text](baby2.mp4)
+![Alt text](https://youtu.be/_dFyt0PCUrg)
+![Alt text](https://youtu.be/wjo-sh04AtM)
 
