@@ -51,19 +51,19 @@ end
 
 The following images shows the result of gaussian and laplacian pyramid.   
 
-**Guassian Pyramid**
+###Guassian Pyramid 
 ![Alt text](/images/gaussian_1.png)
 ![Alt text](/images/gaussian_2.png)
 ![Alt text](/images/gaussian_3.png)
 ![Alt text](/images/gaussian_4.png)
 
-**Laplacian Pyramid**
+###Laplacian Pyramid
 ![Alt text](/images/laplacian_1.png)
 ![Alt text](/images/laplacian_2.png)
 ![Alt text](/images/laplacian_3.png)
 ![Alt text](/images/laplacian_4.png)
 
-## Temporal Filtering
+## Temporal Filtering    
 The constructed laplacian pyramid is then filtered using the butterworth bandpass filter.   
 The butterworth bandpass filter is created using the provided code in `./src` folder.   
 Before applying the filter to pixels, the pixels are converted from time domain to frequency domain so that the filter can be multiplied to pixels.  
@@ -165,6 +165,6 @@ close(v);
 
 The following videos are result of magnifying `face.mp4` and `baby2.mp4`
 
-![Alt text](/face.mp4)
-![Alt text](/baby2.mp4)
+![Alt text](face.mp4)
+![Alt text](baby2.mp4)
 
