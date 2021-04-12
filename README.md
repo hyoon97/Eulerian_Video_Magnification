@@ -165,8 +165,8 @@ end
 close(v);
 ```
 
-The following videos are result of magnifying `face.mp4` and `baby2.mp4`
+The following links redirect to videos result magnifying `face.mp4` and `baby2.mp4`
 
-[link text](https://youtu.be/_dFyt0PCUrg)
-[link text](https://youtu.be/wjo-sh04AtM)
+[face_video](https://youtu.be/_dFyt0PCUrg)
+[baby_video](https://youtu.be/wjo-sh04AtM)
 
