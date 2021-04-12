@@ -19,14 +19,17 @@ end
 
 ## Laplacian Pyramid
 
-After converting the video format from RGB to YIQ, gaussian pyramid is constructed via calling the function `create_laplacian_pyramid`.
-The gaussian pyramid is constructed via using `impyramid(image, 'direction')` to compute gaussian pyramid in the direction of #reduce# or #expand#. 
-Gaussian pyramid is stored in the shape of `[frame, height, width, channel]` to ease the conversion from time domain to frequency for temporal filtering at the next stage.
+After converting the video format from RGB to YIQ, gaussian pyramid is constructed via calling the function `create_laplacian_pyramid`.  
+The gaussian pyramid is constructed via using `impyramid(image, 'direction')` to compute gaussian pyramid in the direction of `reduce`.   
+Gaussian pyramid is stored in the shape of `[frame, height, width, channel]` to ease the conversion from time domain to frequency for temporal filtering at the next stage.   
+Using the constructed gaussian pyramid, laplacian pyramid is constructed by subtracting each gaussian layer by its next layer.   
+
 ```matlab
 pyramid_levels = 4;
 
 [gaussian_pyramid, laplacian_pyramid] = create_laplacian_pyramid(original_video,pyramid_levels);
 ```
+
 ```matlab
 function [gaussian_pyramid, laplacian_pyramid] = create_laplacian_pyramid(original_video,pyramid_levels)
 
@@ -46,7 +49,15 @@ laplacian_pyramid{end+1} = gaussian_pyramid{end};
 end
 ```
 
+The following images shows the result of gaussian and laplacian pyramid.   
+
+
 ## Temporal Filtering
+The constructed laplacian pyramid is then filtered using the butterworth bandpass filter.   
+The butterworth bandpass filter is created using the provided code in `./src` folder.   
+Before applying the filter to pixels, the pixels are converted from time domain to frequency domain so that the filter can be multiplied to pixels.  
+The filtered pixels are converted back to time domain and used to construct filtered pyramid.  
+
 ```matlab
 filtered_pyramid = apply_temporal_filtering(laplacian_pyramid, video.NumFrames, pyramid_levels);
 ```
@@ -89,13 +100,29 @@ for level=1:pyramid_levels
 end
 ```
 
+## Extracting Frequency Band
+```matlab
+frequency_band = [];
+for frame = 1:video.NumFrames
+    magnitude = 0;
+    for level = 1:pyramid_levels
+        laplacian_pyramid_frequency = fft(laplacian_pyramid{level}(:,:,:,frame));
+        magnitude = magnitude + mean(abs(laplacian_pyramid_frequency(:)));
+    end
+    frequency_band = [frequency_band; magnitude];
+end
+plot(frequency_band);
+xlim([0,300]);
+```
+
 ## Image Reconstruction
-Each frame from video are reconstructed by adding amplifying factors to the orginial frame.
+Each frame from video are reconstructed by adding laplacian pyramid and filtered pyramid to the original image.
 ```matlab 
 reconstructed_video = reconstruct_video(laplacian_pyramid,filtered_pyramid, pyramid_levels);
 ```
 
-The amplifying factor is obtained expanding filtered laplacian pyramid to the original size. After expanding all layers from filtered laplacian pyramid, the sum of expanded laplacian layers become the amplifying factor used to magnify the motion inside the video.
+The last layer of laplacian pyramid is downsized original image. The filtered image, which multiplied by the amplifying factor, is added to the last layer of the laplacian pyramid.  
+Then the image is upsampled and are added to the next layer of laplacian pyramid. This is repeated until original image is recovered. 
 
 ```matlab
 function reconstructed_video = reconstruct_video(laplacian_pyramid,filtered_pyramid, pyramid_levels)
