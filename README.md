@@ -165,6 +165,6 @@ close(v);
 
 The following videos are result of magnifying `face.mp4` and `baby2.mp4`
 
-![](/face.mp4)
-![](/baby2.mp4)
+![Alt text](/face.mp4)
+![Alt text](/baby2.mp4)
 
