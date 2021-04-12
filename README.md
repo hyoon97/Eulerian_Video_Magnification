@@ -51,6 +51,10 @@ end
 
 The following images shows the result of gaussian and laplacian pyramid.   
 
+![Alt text](/images/gaussian_1.png)
+![Alt text](/images/gaussian_2.png)
+![Alt text](/images/gaussian_3.png)
+![Alt text](/images/gaussian_4.png)
 
 ## Temporal Filtering
 The constructed laplacian pyramid is then filtered using the butterworth bandpass filter.   
