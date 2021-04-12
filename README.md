@@ -165,12 +165,6 @@ close(v);
 
 The following videos are result of magnifying `face.mp4` and `baby2.mp4`
 
-<video controls="controls">
-  <source type="video/mp4" src="baby2.mp4"></source>
-</video>
-
-<video controls="controls">
-  <source type="video/mp4" src="face.mp4"></source>
-</video>
-
+![](face.mp4)
+![](baby2.mp4)
 
